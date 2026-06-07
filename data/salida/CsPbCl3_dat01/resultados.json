@@ -1,0 +1,13 @@
+{
+  "compound": "CsPbCl3_dat01",
+  "grid_shape": [
+    16,
+    16
+  ],
+  "e_min_discreto": -141.2777,
+  "min_interpolado_meV": -1.6037599999920111,
+  "E0_absoluta": -141.27930376,
+  "theta_star_idx": 0.0,
+  "phi_star_idx": 10.399999999999991,
+  "sub_region": "theta[0:5] phi[8:13]"
+}
