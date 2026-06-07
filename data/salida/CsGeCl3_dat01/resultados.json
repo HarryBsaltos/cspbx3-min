@@ -1,0 +1,13 @@
+{
+  "compound": "CsGeCl3_dat01",
+  "grid_shape": [
+    16,
+    16
+  ],
+  "e_min_discreto": -140.40187,
+  "min_interpolado_meV": -1.3840620049897565,
+  "E0_absoluta": -140.403254062005,
+  "theta_star_idx": 0.30000000000000004,
+  "phi_star_idx": 0.30000000000000004,
+  "sub_region": "theta[0:5] phi[0:5]"
+}
