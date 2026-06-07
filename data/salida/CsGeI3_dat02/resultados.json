@@ -1,0 +1,13 @@
+{
+  "compound": "CsGeI3_dat02",
+  "grid_shape": [
+    16,
+    16
+  ],
+  "e_min_discreto": -112.79872,
+  "min_interpolado_meV": -0.09005875000015093,
+  "E0_absoluta": -112.79881005875,
+  "theta_star_idx": 0.0,
+  "phi_star_idx": 2.1,
+  "sub_region": "theta[0:5] phi[0:5]"
+}
