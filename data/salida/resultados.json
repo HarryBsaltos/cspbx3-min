@@ -1,0 +1,8 @@
+{
+  "source": "github",
+  "e_min_discreto": -127.84351,
+  "min_interpolado_meV": -0.010033750000085953,
+  "E0_absoluta": -127.84352003375,
+  "theta_star_idx": 1.9000000000000001,
+  "phi_star_idx": 10.999999999999993
+}
