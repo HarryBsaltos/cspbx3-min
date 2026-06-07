@@ -71,7 +71,6 @@ except ImportError:  # pragma: no cover
 # Constantes del problema
 # ---------------------------------------------------------------------------
 
-GRID_SIZE = 21
 #: Tamaño (en puntos de la grilla) de la ventana 2D que se interpola
 #: alrededor del mínimo discreto. Por defecto 5x5 centrada en el mínimo.
 SUBREGION_SIZE = 5
@@ -83,15 +82,19 @@ def auto_subregion(
 ) -> tuple[slice, slice]:
     """Devuelve un slice 2D centrado en el mínimo discreto de ``energies``.
 
-    Si el mínimo está cerca de un borde se desplaza la ventana hacia adentro
-    para que siempre encierre ``size``×``size`` puntos válidos.
+    Si el mínimo está cerca de un borde se desplaza la ventana hacia adentro.
+    Si la grilla es más chica que ``size`` en alguna dimensión, devuelve la
+    grilla completa.
     """
-    n = energies.shape[0]
-    half = size // 2
-    i, j = np.unravel_index(int(np.argmin(energies)), energies.shape)
-    i0 = max(0, min(i - half, n - size))
-    j0 = max(0, min(j - half, n - size))
-    return slice(i0, i0 + size), slice(j0, j0 + size)
+    nt, npp = energies.shape
+    size_t = min(size, nt)
+    size_p = min(size, npp)
+    half_t, half_p = size_t // 2, size_p // 2
+    safe = np.where(np.isnan(energies), np.inf, energies)
+    i, j = np.unravel_index(int(np.argmin(safe)), energies.shape)
+    i0 = max(0, min(i - half_t, nt - size_t))
+    j0 = max(0, min(j - half_p, npp - size_p))
+    return slice(i0, i0 + size_t), slice(j0, j0 + size_p)
 
 
 # ---------------------------------------------------------------------------
@@ -99,14 +102,32 @@ def auto_subregion(
 # ---------------------------------------------------------------------------
 
 def _load_from_text(text: str) -> np.ndarray:
-    """Parsea el contenido de un archivo de grilla en una matriz 21x21."""
+    """Parsea un archivo de 3 columnas (i_theta, i_phi, E) en una matriz 2D.
+
+    Soporta cualquier grilla rectangular regular: detecta los índices únicos
+    de θ y φ y reconstruye la matriz por indexación. Tolera líneas vacías
+    o filas faltantes (rellena con NaN). Si la grilla no es rectangular
+    completa, igual devuelve la matriz con NaNs en los huecos.
+    """
     raw = np.loadtxt(io.StringIO(text))
-    expected = GRID_SIZE * GRID_SIZE
-    if raw.shape[0] != expected:
-        raise ValueError(
-            f"Se esperaban {expected} filas, llegaron {raw.shape[0]}."
+    if raw.ndim != 2 or raw.shape[1] < 3:
+        raise ValueError(f"El archivo no tiene 3 columnas; shape={raw.shape}")
+    theta_vals = np.unique(raw[:, 0]).astype(int)
+    phi_vals = np.unique(raw[:, 1]).astype(int)
+    nt, npp = len(theta_vals), len(phi_vals)
+    # Mapa de índice original -> posición en la matriz compactada.
+    ti = {v: i for i, v in enumerate(theta_vals)}
+    pi = {v: i for i, v in enumerate(phi_vals)}
+    energies = np.full((nt, npp), np.nan)
+    for row in raw:
+        energies[ti[int(row[0])], pi[int(row[1])]] = row[2]
+    if np.isnan(energies).any():
+        n_missing = int(np.isnan(energies).sum())
+        print(
+            f"AVISO: grilla {nt}x{npp} incompleta — {n_missing} puntos NaN; "
+            "interpolación se hará con los presentes."
         )
-    return raw[:, 2].reshape((GRID_SIZE, GRID_SIZE))
+    return energies
 
 
 def load_energy_grid_local(path: Path) -> np.ndarray:
@@ -261,11 +282,12 @@ def main(argv: list[str] | None = None) -> int:
     rel_full, e_min_disc = relative_energy_meV(energies)
     args.outdir.mkdir(parents=True, exist_ok=True)
 
-    theta_full = np.arange(GRID_SIZE)
-    phi_full = np.arange(GRID_SIZE)
+    nt, npp = rel_full.shape
+    theta_full = np.arange(nt)
+    phi_full = np.arange(npp)
     th_full, ph_full = np.meshgrid(theta_full, phi_full, indexing="ij")
     _plot_surface(th_full, ph_full, rel_full,
-                  title="Superficie de energía completa (21×21)",
+                  title=f"Superficie de energía completa ({nt}×{npp})",
                   outpath=args.outdir / "01_surface_full.png")
 
     theta_slice, phi_slice = auto_subregion(rel_full, size=SUBREGION_SIZE)
