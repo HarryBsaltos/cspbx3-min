@@ -72,9 +72,26 @@ except ImportError:  # pragma: no cover
 # ---------------------------------------------------------------------------
 
 GRID_SIZE = 21
-THETA_SLICE = slice(0, 5)
-PHI_SLICE = slice(9, 14)
+#: Tamaño (en puntos de la grilla) de la ventana 2D que se interpola
+#: alrededor del mínimo discreto. Por defecto 5x5 centrada en el mínimo.
+SUBREGION_SIZE = 5
 REFINED_STEP = 0.1
+
+
+def auto_subregion(
+    energies: np.ndarray, size: int = SUBREGION_SIZE,
+) -> tuple[slice, slice]:
+    """Devuelve un slice 2D centrado en el mínimo discreto de ``energies``.
+
+    Si el mínimo está cerca de un borde se desplaza la ventana hacia adentro
+    para que siempre encierre ``size``×``size`` puntos válidos.
+    """
+    n = energies.shape[0]
+    half = size // 2
+    i, j = np.unravel_index(int(np.argmin(energies)), energies.shape)
+    i0 = max(0, min(i - half, n - size))
+    j0 = max(0, min(j - half, n - size))
+    return slice(i0, i0 + size), slice(j0, j0 + size)
 
 
 # ---------------------------------------------------------------------------
@@ -251,9 +268,11 @@ def main(argv: list[str] | None = None) -> int:
                   title="Superficie de energía completa (21×21)",
                   outpath=args.outdir / "01_surface_full.png")
 
-    sub = rel_full[THETA_SLICE, PHI_SLICE]
-    theta_sub = np.arange(THETA_SLICE.start, THETA_SLICE.stop)
-    phi_sub = np.arange(PHI_SLICE.start, PHI_SLICE.stop)
+    theta_slice, phi_slice = auto_subregion(rel_full, size=SUBREGION_SIZE)
+    sub = rel_full[theta_slice, phi_slice]
+    theta_sub = np.arange(theta_slice.start, theta_slice.stop)
+    phi_sub = np.arange(phi_slice.start, phi_slice.stop)
+    print(f"Sub-región auto-detectada: θ[{theta_slice.start}:{theta_slice.stop}] φ[{phi_slice.start}:{phi_slice.stop}]")
     th_sub, ph_sub = np.meshgrid(theta_sub, phi_sub, indexing="ij")
     _plot_surface(th_sub, ph_sub, sub,
                   title="Sub-región 5×5 alrededor del mínimo",
